@@ -1,0 +1,156 @@
+---
+title: "Iris Machine Learning"
+author: "Bhoomika John Pedely"
+date: "2023-08-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is a supervised classification problem. Given the measurements of different parts of the flowers, species of Iris needs to be determined.
+
+#### Loading libraries
+
+```{r}
+#install.packages("mlbench")
+#install.packages("caret")
+#install.packages("klaR)
+
+```
+```{r}
+library(mlbench)
+library(caret)
+```
+#### Load the data
+
+```{r}
+data("iris")
+dataset <- iris
+```
+```{r}
+# create a list of 80% of the rows in the original dataset we can use for training
+validation_index <- createDataPartition(dataset$Species, p=0.80, list=FALSE)
+# select 20% of the data for validation
+validation <- dataset[-validation_index,]
+# use the remaining 80% of data to training and testing the models
+dataset <- dataset[validation_index,]
+```
+
+
+#### Summarize dataset
+
+```{r}
+# dimensions of dataset
+dim(dataset)
+```
+
+
+```{r}
+# list types for each attribute
+sapply(dataset, class)
+```
+
+
+```{r}
+# take a peek at the first 5 rows of the data
+head(dataset)
+```
+
+
+```{r}
+# list the levels for the class
+levels(dataset$Species)
+```
+```{r}
+# summarize the class distribution
+percentage <- prop.table(table(dataset$Species)) * 100
+cbind(freq=table(dataset$Species), percentage=percentage)
+```
+
+```{r}
+# summarize attribute distributions
+summary(dataset)
+```
+#### Visualize dataset
+
+```{r}
+# split input and output
+x <- dataset[,1:4]
+y <- dataset[,5]
+```
+
+```{r}
+# boxplot for each attribute on one image
+par(mfrow=c(1,4))
+  for(i in 1:4) {
+  boxplot(x[,i], main=names(iris)[i])
+}
+```
+```{r}
+# barplot for class breakdown
+plot(y)
+```
+
+
+```{r}
+# box and whisker plots for each attribute
+featurePlot(x=x, y=y, plot="box")
+```
+```{r}
+# density plots for each attribute by class value
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+featurePlot(x=x, y=y, plot="density", scales=scales)
+```
+#### Evaluate some algorithms
+
+```{r}
+# Run algorithms using 10-fold cross validation
+control <- trainControl(method="cv", number=10)
+metric <- "Accuracy"
+```
+
+```{r}
+# a) linear algorithms
+set.seed(7)
+fit.lda <- train(Species~., data=dataset, method="lda", metric=metric, trControl=control)
+# b) nonlinear algorithms
+# CART
+set.seed(7)
+fit.cart <- train(Species~., data=dataset, method="rpart", metric=metric, trControl=control)
+# kNN
+set.seed(7)
+fit.knn <- train(Species~., data=dataset, method="knn", metric=metric, trControl=control)
+# c) advanced algorithms
+# SVM
+set.seed(7)
+fit.svm <- train(Species~., data=dataset, method="svmRadial", metric=metric, trControl=control)
+# Random Forest
+set.seed(7)
+fit.rf <- train(Species~., data=dataset, method="rf", metric=metric, trControl=control)
+```
+
+```{r}
+# summarize accuracy of models
+results <- resamples(list(lda=fit.lda, cart=fit.cart, knn=fit.knn, svm=fit.svm, rf=fit.rf))
+summary(results)
+```
+```{r}
+# compare accuracy of models
+dotplot(results)
+```
+
+```{r}
+# summarize Best Model
+print(fit.knn)
+```
+#### Make predictions
+
+```{r}
+# estimate skill of LDA on the validation dataset
+predictions <- predict(fit.lda, validation)
+confusionMatrix(predictions, validation$Species)
+
+```
+
